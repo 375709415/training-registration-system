@@ -1,0 +1,2109 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>FY27深周后勤培训报名 · 数据共享版</title>
+    <!-- Chart.js 4 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- SheetJS -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- 引入js-sha256用于生成分享码 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-sha256/0.9.0/sha256.min.js"></script>
+    <!-- 引入localStorage库用于数据共享 -->
+    <script src="https://cdn.jsdelivr.net/npm/store2@2.14.2/dist/store2.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+        body { background: #f5f5f5; padding: 16px; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .app-container { max-width: 1600px; width: 100%; background: white; border-radius: 32px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); padding: 24px; }
+        
+        .role-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; background: #f0f0f0; padding: 12px 24px; border-radius: 60px; margin-bottom: 28px; border: 1px solid #ddd; }
+        .role-tabs { display: flex; gap: 12px; }
+        .role-btn { background: transparent; border: none; padding: 10px 28px; border-radius: 40px; font-weight: 600; cursor: pointer; color: #333; transition: all 0.2s; }
+        .role-btn.active { background: #b33a3a; color: white; box-shadow: 0 4px 8px rgba(180,30,30,0.3); }
+        .role-btn i { margin-right: 8px; }
+        .badge { background: #e0e0e0; padding: 8px 18px; border-radius: 30px; font-size: 0.9rem; color: #b33a3a; font-weight: 500; border: 1px solid #ccc; }
+        
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+        .password-modal { background: white; border-radius: 40px; padding: 32px 36px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 30px 50px rgba(0,0,0,0.3); border: 2px solid #b33a3a; }
+        .password-modal h3 { font-size: 1.8rem; color: #b33a3a; margin-bottom: 20px; }
+        .password-modal input { width: 100%; padding: 16px 22px; border: 2px solid #ddd; border-radius: 60px; font-size: 1.1rem; margin: 10px 0; outline: none; }
+        .password-modal input:focus { border-color: #b33a3a; }
+        .modal-buttons { display: flex; gap: 12px; justify-content: center; margin-top: 20px; }
+        .btn-modal { background: #b33a3a; color: white; border: none; padding: 12px 32px; border-radius: 40px; font-weight: 600; cursor: pointer; font-size: 1rem; }
+        .btn-modal.cancel { background: transparent; color: #b33a3a; border: 1px solid #b33a3a; }
+        
+        .init-section { background: #f8f8f8; border-radius: 24px; padding: 20px 24px; margin-bottom: 30px; border: 1px solid #ddd; }
+        .init-grid { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between; }
+        .file-upload-group { display: flex; flex-wrap: wrap; gap: 15px; align-items: center; }
+        .file-label { background: white; border: 1px solid #b33a3a; border-radius: 40px; padding: 10px 20px; cursor: pointer; font-weight: 500; color: #b33a3a; }
+        .file-label i { color: #b33a3a; margin-right: 6px; }
+        .file-label input { display: none; }
+        .deadline-set { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+        .deadline-set input { padding: 10px 15px; border-radius: 30px; border: 1px solid #ccc; background: white; }
+        .btn { background: white; border: 1px solid #b33a3a; color: #b33a3a; padding: 10px 24px; border-radius: 40px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: 0.15s; }
+        .btn-primary { background: #b33a3a; color: white; border: none; }
+        .btn-primary:hover { background: #8f2e2e; }
+        .btn-outline { background: transparent; border: 1px solid #b33a3a; color: #b33a3a; }
+        .btn-outline:hover { background: #f5f5f5; }
+        
+        /* 云端分享面板 */
+        .cloud-share-section { background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border-radius: 24px; padding: 20px; margin: 20px 0; border: 2px dashed #2e7d32; }
+        .cloud-share-title { color: #2e7d32; font-size: 1.2rem; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+        .cloud-share-note { color: #1b5e20; font-size: 0.9rem; margin-top: 10px; }
+        .share-id-display { background: white; padding: 12px 18px; border-radius: 40px; border: 1px solid #2e7d32; margin: 10px 0; font-family: monospace; font-size: 1.1rem; display: flex; align-items: center; gap: 10px; }
+        .share-id-display i { color: #2e7d32; }
+        .share-link-display { background: white; padding: 15px; border-radius: 40px; border: 1px solid #2e7d32; margin: 10px 0; word-break: break-all; font-family: monospace; }
+        
+        /* Excel风格表格 */
+        .excel-table-container { background: white; border-radius: 20px; border: 1px solid #ddd; overflow: auto; max-height: 350px; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .excel-table { width: 100%; border-collapse: collapse; min-width: 600px; font-size: 0.9rem; }
+        .excel-table th { background: #f0f0f0; position: sticky; top: 0; z-index: 10; padding: 14px 12px; font-weight: 600; color: #333; border-bottom: 2px solid #b33a3a; text-align: left; }
+        .excel-table td { padding: 12px; border-bottom: 1px solid #eee; }
+        .excel-table tr:hover { background: #f9f9f9; }
+        .excel-table .filter-row td { background: #f5f5f5; padding: 8px 12px; border-bottom: 2px solid #ccc; }
+        .excel-table .filter-row input { width: 100%; padding: 8px 10px; border-radius: 30px; border: 1px solid #ccc; background: white; font-size: 0.85rem; }
+        
+        .reference-section { background: #f8f8f8; border-radius: 28px; padding: 20px; margin-bottom: 25px; border: 1px solid #ddd; }
+        .section-title { font-size: 1.3rem; font-weight: 700; color: #b33a3a; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
+        
+        .form-card { background: white; border-radius: 28px; padding: 28px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); border: 1px solid #ddd; margin: 25px 0; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px,1fr)); gap: 18px 25px; }
+        .field-group { display: flex; flex-direction: column; gap: 5px; }
+        .field-group label { font-weight: 600; color: #333; font-size: 0.9rem; }
+        .field-group input, .field-group select { padding: 12px 18px; border-radius: 30px; border: 1.5px solid #ddd; background: #f9f9f9; font-size: 0.95rem; }
+        .field-group input:focus, .field-group select:focus { border-color: #b33a3a; outline: none; }
+        .submit-feedback { margin-top: 24px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+        .feedback-msg { background: #f0f0f0; border-radius: 40px; padding: 12px 25px; color: #b33a3a; font-weight: 500; display: inline-flex; align-items: center; gap: 8px; border: 1px solid #b33a3a; }
+        
+        .dashboard-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin: 25px 0; }
+        .chart-card { background: white; border-radius: 24px; padding: 16px; border: 1px solid #ddd; box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: all 0.3s; }
+        .chart-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+        .chart-card h4 { margin-bottom: 12px; display: flex; align-items: center; gap: 6px; font-size: 1rem; }
+        .chart-card canvas { max-height: 200px; width: 100%; }
+        
+        .stats-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 16px; margin-bottom: 25px; }
+        .stat-card { background: white; border-radius: 24px; padding: 20px; border: 1px solid #ddd; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .stat-card .title { color: #666; font-size: 0.9rem; }
+        .stat-card .value { font-size: 2.2rem; font-weight: 700; color: #b33a3a; }
+        
+        .progress-container { margin: 15px 0; }
+        .progress-item { margin: 12px 0; }
+        .progress-header { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 0.9rem; color: #333; }
+        .progress-bar-bg { height: 20px; background: #eee; border-radius: 30px; overflow: hidden; border: 1px solid #27ae60; }
+        .progress-bar-fill { height: 20px; background: #27ae60; border-radius: 30px; width: 0%; transition: width 0.3s; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; color: white; font-size: 0.8rem; }
+        
+        .data-table { width: 100%; border-collapse: collapse; background: white; border-radius: 20px; overflow: hidden; margin-top: 15px; border: 1px solid #ddd; }
+        .data-table th { background: #f0f0f0; padding: 16px 12px; text-align: left; font-weight: 600; color: #333; border-bottom: 2px solid #b33a3a; }
+        .data-table td { padding: 14px 12px; border-bottom: 1px solid #eee; }
+        
+        .history-filter { background: white; border-radius: 30px; padding: 15px 20px; margin-bottom: 20px; border: 1px solid #ddd; display: flex; flex-wrap: wrap; gap: 20px; align-items: center; }
+        .filter-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .filter-group select { padding: 8px 16px; border-radius: 30px; border: 1px solid #ccc; background: white; color: #333; }
+        
+        .success-toast { position: fixed; top: 24px; right: 24px; background: #b33a3a; color: white; padding: 16px 28px; border-radius: 60px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 12px; font-weight: 500; z-index: 10000; animation: slideIn 0.3s ease; border: 1px solid #fff; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        
+        .upload-success { background: #e8f5e9; border: 2px solid #27ae60; border-radius: 40px; padding: 10px 20px; margin-top: 10px; display: inline-flex; align-items: center; gap: 8px; color: #27ae60; font-weight: 500; }
+        
+        .multi-course-card { background: #f8f8f8; border-radius: 28px; padding: 20px; margin: 25px 0; border: 1px solid #ddd; }
+        .multi-course-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
+        .multi-course-header h3 { color: #b33a3a; display: flex; align-items: center; gap: 8px; }
+        .selected-emp-info { background: white; padding: 8px 20px; border-radius: 40px; font-weight: 500; color: #b33a3a; border: 1px solid #b33a3a; }
+        .course-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+        .course-item { background: white; border-radius: 20px; padding: 16px; border: 1px solid #ddd; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: all 0.2s; }
+        .course-item:hover { border-color: #b33a3a; box-shadow: 0 4px 12px rgba(180,30,30,0.1); }
+        .course-checkbox input[type="checkbox"] { width: 18px; height: 18px; accent-color: #b33a3a; cursor: pointer; }
+        .course-checkbox label { font-weight: 600; color: #333; cursor: pointer; flex: 1; }
+        .course-selects select { flex: 1; padding: 8px 12px; border-radius: 30px; border: 1px solid #ccc; background: white; font-size: 0.9rem; cursor: pointer; }
+        .selected-summary { background: #f0f0f0; border-radius: 40px; padding: 12px 20px; margin-top: 20px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; border: 1px solid #b33a3a; }
+        .selected-badge { background: #b33a3a; color: white; border-radius: 30px; padding: 4px 12px; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px; }
+        
+        .submissions-section { background: white; border-radius: 28px; padding: 20px; border: 1px solid #ddd; margin: 25px 0; }
+        .submissions-table-container { overflow: auto; max-height: 300px; border-radius: 16px; border: 1px solid #ddd; }
+        .submissions-table th { background: #f0f0f0; position: sticky; top: 0; padding: 12px; font-weight: 600; color: #333; border-bottom: 2px solid #b33a3a; }
+        .submissions-table td { padding: 12px; border-bottom: 1px solid #eee; }
+        .status-badge { background: #f0f0f0; color: #b33a3a; border-radius: 30px; padding: 2px 12px; font-size: 0.8rem; display: inline-block; border: 1px solid #b33a3a; }
+        .status-badge.approved { background: #b33a3a; color: white; }
+        .leave-badge { background: #f0f0f0; color: #b33a3a; border-radius: 30px; padding: 2px 12px; font-size: 0.8rem; display: inline-block; border: 1px solid #b33a3a; }
+        
+        .editable-table-container { overflow: auto; border-radius: 20px; border: 1px solid #ddd; margin: 20px 0; max-height: 400px; }
+        .editable-table { width: 100%; border-collapse: collapse; min-width: 1300px; font-size: 0.9rem; }
+        .editable-table th { background: #f0f0f0; position: sticky; top: 0; z-index: 20; padding: 14px 12px; font-weight: 600; color: #333; border-bottom: 2px solid #b33a3a; }
+        .editable-table td { padding: 12px; border-bottom: 1px solid #eee; }
+        .editable-table tr:hover { background: #f9f9f9; }
+        .editable-table input, .editable-table select { width: 100%; padding: 6px 10px; border-radius: 20px; border: 1px solid #b33a3a; outline: none; font-size: 0.9rem; background: white; }
+        .edit-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .btn-edit { background: #f0f0f0; color: #b33a3a; border: 1px solid #b33a3a; padding: 4px 12px; border-radius: 20px; cursor: pointer; font-size: 0.8rem; }
+        .btn-save { background: #b33a3a; color: white; padding: 4px 12px; border-radius: 20px; cursor: pointer; font-size: 0.8rem; border: none; }
+        .btn-cancel { background: #f0f0f0; color: #666; border: 1px solid #999; padding: 4px 12px; border-radius: 20px; cursor: pointer; font-size: 0.8rem; }
+        .btn-delete { background: #f0f0f0; color: #b33a3a; border: 1px solid #b33a3a; padding: 4px 12px; border-radius: 20px; cursor: pointer; font-size: 0.8rem; }
+        .btn-leave { background: #f0f0f0; color: #b33a3a; border: 1px solid #b33a3a; padding: 4px 12px; border-radius: 20px; cursor: pointer; font-size: 0.8rem; }
+        
+        .empty-warning { background: #f8f8f8; border-left: 4px solid #b33a3a; padding: 10px 16px; border-radius: 12px; margin: 10px 0; font-size: 0.9rem; color: #333; }
+        .position-badge { background: #f0f0f0; color: #b33a3a; border-radius: 30px; padding: 2px 10px; font-size: 0.8rem; display: inline-block; border: 1px solid #b33a3a; }
+        
+        .export-buttons { display: flex; gap: 10px; flex-wrap: wrap; margin: 15px 0; }
+        .export-buttons button { background: white; border: 1px solid #b33a3a; color: #b33a3a; padding: 8px 16px; border-radius: 30px; cursor: pointer; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s; }
+        .export-buttons button:hover { background: #b33a3a; color: white; }
+        .export-buttons button i { color: #b33a3a; }
+        .export-buttons button:hover i { color: white; }
+        
+        @media (max-width:1000px){ .dashboard-grid-2 { grid-template-columns:1fr; } }
+    </style>
+</head>
+<body>
+<div class="app-container" id="appContainer">
+    <div class="role-header">
+        <div class="role-tabs">
+            <button class="role-btn" id="btnTrainee"><i class="fas fa-user-pen"></i> 培训对口人</button>
+            <button class="role-btn active" id="btnAdmin"><i class="fas fa-user-gear"></i> 管理员看板</button>
+        </div>
+        <div class="badge"><i class="far fa-calendar"></i> 报名截止: <span id="deadlineDisplay">未设置</span></div>
+    </div>
+    <div id="dynamicContent"></div>
+
+    <!-- 密码模态框 (管理员) -->
+    <div id="passwordModal" class="modal-overlay" style="display: none;">
+        <div class="password-modal">
+            <h3><i class="fas fa-lock"></i> 管理员验证</h3>
+            <input type="text" id="adminUserInput" placeholder="账号" value="">
+            <input type="password" id="adminPasswordInput" placeholder="密码" value="">
+            <div class="modal-buttons">
+                <button class="btn-modal cancel" id="cancelPasswordBtn">取消</button>
+                <button class="btn-modal" id="submitPasswordBtn">进入</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 全局成功提示组件容器 -->
+<div id="successToastContainer" style="position: fixed; top: 24px; right: 24px; z-index: 10000;"></div>
+
+<script>
+    (function(){
+        // 常量
+        const monthOptions = ['2026-04','2026-05','2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12','2027-01','2027-02','2027-03'];
+        const moduleOptions = ['①','②','③','④','⑤','⑥'];
+        let courses = ['AI基础','机器学习','深度学习','LLM实战','数据治理'];
+
+        // 核心数据
+        let untrainedEmployees = [];        // 未培训名单
+        let submissions = [];                // 所有报名记录
+        let deadline = null;
+
+        // 职级映射表：职务 -> 职级
+        let positionGradeMap = new Map();
+
+        // 管理员凭证
+        const ADMIN_USER = 'ctfhr';
+        const ADMIN_PASSWORD = 'ctfhr@2025';
+
+        // 历史筛选状态
+        let historyYear = 'all';
+        let historyQuarter = 'all';
+        let historyMonth = 'all';
+        let historyGrade = 'all';
+
+        // 部门筛选状态
+        let selectedDept = 'all';
+
+        // 当前选中的员工和课程选择
+        let currentSelectedEmpId = null;
+        let currentCourseSelections = [];
+
+        // 当前正在编辑的报名记录ID
+        let editingSubmissionId = null;
+
+        // 共享会话ID
+        let shareId = null;
+
+        // ========== 数据共享机制 ==========
+        // 使用localStorage作为共享存储，通过shareId隔离不同会话
+        
+        // 从localStorage加载
+        function loadFromStorage() {
+            try {
+                // 首先检查URL中是否有shareId
+                const urlParams = new URLSearchParams(window.location.search);
+                const urlShareId = urlParams.get('share');
+                
+                if (urlShareId) {
+                    shareId = urlShareId;
+                    // 从共享存储加载数据
+                    loadSharedData(shareId);
+                    return;
+                }
+                
+                // 否则从本地存储加载
+                const saved = localStorage.getItem('fy27_training_admin_data');
+                if(saved) {
+                    const data = JSON.parse(saved);
+                    untrainedEmployees = data.untrainedEmployees || [];
+                    submissions = data.submissions || [];
+                    deadline = data.deadline || null;
+                    
+                    if (data.positionGradeMap) {
+                        positionGradeMap = new Map(Object.entries(data.positionGradeMap));
+                    } else {
+                        initPositionGradeMap();
+                    }
+                } else {
+                    initPositionGradeMap();
+                    
+                    // 演示数据
+                    untrainedEmployees = [
+                        {工号:'10000246',姓名:'吴燕满',部门:'珠宝中国-电子商务部-SOINLOVE科-产品研发组',职务:'运营专员'},
+                        {工号:'10005112',姓名:'卢雪颖',部门:'集团驻地-珠宝产品创意设计A部（深圳）-项目科-业务组',职务:'设计师'},
+                        {工号:'10006721',姓名:'蔡少燕',部门:'珠宝中国-人才与文化部-人力资源服务共享科-共享服务组',职务:'人力资源专员'},
+                        {工号:'10012884',姓名:'王小俊',部门:'珠宝中国-物业管理部-物业服务科-客户服务组',职务:'物业主管'},
+                        {工号:'10019089',姓名:'张荷芳',部门:'财务与法务-财务-财务会计与流程-应收与应付管理（WH）',职务:'财务专员'},
+                        {工号:'10021343',姓名:'郑妙玲',部门:'珠宝中国-总务部-采购科-分店消耗性物料订购组',职务:'采购专员'},
+                        {工号:'10029735',姓名:'钟梓贤',部门:'财务与法务-财务-财务会计与流程-应收与应付管理（WH）',职务:'财务专员'},
+                        {工号:'10033966',姓名:'李婷',部门:'珠宝中国-电子商务部-电商产品与交付管理-产品需求分析组',职务:'产品经理'},
+                        {工号:'10036074',姓名:'欧萱婷',部门:'集团驻内地-珠宝产品创意设计A部（深圳）-创意科-视觉组',职务:'视觉设计师'},
+                        {工号:'10038142',姓名:'黄麟岚',部门:'珠宝中国-物业管理部-物业服务科-物业服务组',职务:'物业主管'},
+                        {工号:'10040851',姓名:'邱穗发',部门:'珠宝中国-业务发展部-门店网络发展科',职务:'业务专员'},
+                        {工号:'10042586',姓名:'陈新莲',部门:'珠宝中国-物业管理部-综合管理科',职务:'综合管理'},
+                        {工号:'10045200',姓名:'何秋丽',部门:'珠宝中国-电子商务部-电商渠道管理2科-京东渠道组',职务:'渠道运营'},
+                        {工号:'10046789',姓名:'张三',部门:'珠宝中国-工程部-设计组',职务:'工程师'},
+                        {工号:'10047890',姓名:'李四',部门:'珠宝中国-工程部-施工组',职务:'工程师'},
+                        {工号:'10048901',姓名:'王五',部门:'珠宝中国-品牌部-推广组',职务:'品牌专员'},
+                        {工号:'10049123',姓名:'赵六',部门:'珠宝中国-技术部-研发科',职务:'高级工程师'},
+                        {工号:'10050134',姓名:'钱七',部门:'珠宝中国-市场部-品牌科',职务:'高级品牌经理'},
+                        {工号:'10051145',姓名:'孙八',部门:'珠宝中国-财务部-会计科',职务:'高级会计师'},
+                        {工号:'10052156',姓名:'周九',部门:'珠宝中国-人力资源部-培训科',职务:'高级培训师'},
+                    ];
+                    
+                    submissions = [];
+                    for (let i = 1; i <= 5; i++) {
+                        const emp = untrainedEmployees[Math.floor(Math.random() * untrainedEmployees.length)];
+                        const course = courses[Math.floor(Math.random() * courses.length)];
+                        const month = monthOptions[Math.floor(Math.random() * monthOptions.length)];
+                        const module = moduleOptions[Math.floor(Math.random() * moduleOptions.length)];
+                        const status = Math.random() > 0.3 ? '待审核' : '已审核';
+                        const leave = Math.random() > 0.8 ? '请假' : '';
+                        
+                        submissions.push({
+                            id: 'sub_' + Date.now() + '_' + i + '_' + Math.random().toString(36).substr(2,4),
+                            工号: emp.工号,
+                            姓名: emp.姓名,
+                            部门: emp.部门,
+                            职务: emp.职务,
+                            课程: course,
+                            月份: month,
+                            模块: module,
+                            提交时间: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
+                            审核状态: status,
+                            请假状态: leave
+                        });
+                    }
+                    
+                    deadline = '2026-03-30T18:00';
+                }
+            } catch(e){ console.warn(e); }
+        }
+        
+        // 保存到本地存储
+        function saveToStorage() {
+            const positionGradeObj = {};
+            positionGradeMap.forEach((value, key) => {
+                positionGradeObj[key] = value;
+            });
+            
+            const data = { 
+                untrainedEmployees, 
+                submissions, 
+                deadline,
+                positionGradeMap: positionGradeObj
+            };
+            
+            // 保存到管理员本地
+            localStorage.setItem('fy27_training_admin_data', JSON.stringify(data));
+            
+            // 如果有共享ID，也保存到共享存储
+            if (shareId) {
+                saveSharedData(shareId);
+            }
+        }
+
+        // 保存到共享存储
+        function saveSharedData(id) {
+            const positionGradeObj = {};
+            positionGradeMap.forEach((value, key) => {
+                positionGradeObj[key] = value;
+            });
+            
+            const data = { 
+                untrainedEmployees, 
+                submissions, 
+                deadline,
+                positionGradeMap: positionGradeObj,
+                lastUpdate: new Date().toISOString()
+            };
+            
+            localStorage.setItem('fy27_share_' + id, JSON.stringify(data));
+            console.log('数据已保存到共享存储', id);
+        }
+
+        // 从共享存储加载
+        function loadSharedData(id) {
+            const shared = localStorage.getItem('fy27_share_' + id);
+            if (shared) {
+                const data = JSON.parse(shared);
+                untrainedEmployees = data.untrainedEmployees || [];
+                submissions = data.submissions || [];
+                deadline = data.deadline || null;
+                
+                if (data.positionGradeMap) {
+                    positionGradeMap = new Map(Object.entries(data.positionGradeMap));
+                } else {
+                    initPositionGradeMap();
+                }
+                
+                showSuccessToast('已加载共享数据');
+                
+                // 自动切换到培训对口人界面
+                setTimeout(() => {
+                    switchRole('trainee');
+                }, 500);
+            } else {
+                showSuccessToast('共享ID不存在或已过期');
+            }
+        }
+
+        // 创建新的共享会话
+        function createShareSession() {
+            // 生成唯一的shareId
+            const newShareId = sha256(Date.now() + Math.random().toString()).substring(0, 8);
+            shareId = newShareId;
+            
+            // 保存数据到共享存储
+            saveSharedData(newShareId);
+            
+            // 生成分享链接
+            const shareUrl = window.location.href.split('?')[0] + '?share=' + newShareId;
+            
+            return { shareId: newShareId, shareUrl };
+        }
+
+        // 初始化职级映射表
+        function initPositionGradeMap() {
+            positionGradeMap.clear();
+            
+            const gradeData = [
+                ["高级文员", "高级文员"], 
+                ["高级会计师", "高级主任二"], 
+                ["副经理", "副经理二"],
+                ["中级文员", "中级文员"], 
+                ["主任助理", "主任助理"], 
+                ["主任", "主任二"],
+                ["文员", "文员"], 
+                ["高级人力资源管理师", "主任二"], 
+                ["资讯设备专员", "文员"],
+                ["高级经理", "高级经理二"], 
+                ["高级摄影员", "高级文员"], 
+                ["财务专员", "文员"],
+                ["摄影师", "主任助理"], 
+                ["UI/UX设计师", "高级主任二"], 
+                ["鉴定师", "主任助理"],
+                ["副主任", "副主任二"], 
+                ["助理设计师", "高级文员"], 
+                ["高级财务专员", "高级文员"],
+                ["运营专员", "文员"], 
+                ["高级法律顾问", "高级主任二"], 
+                ["高级主任", "高级主任二"],
+                ["经理", "经理二"], 
+                ["副主任摄影师", "副主任二"], 
+                ["技工", "操作层/实习生"],
+                ["招商助理", "主任助理"], 
+                ["舍监", "操作层/实习生"], 
+                ["高级培训师（二级）", "主任二"],
+                ["中级仓务", "中级文员"], 
+                ["助理摄影师", "高级文员"], 
+                ["副总监", "副总监"],
+                ["设计师", "主任助理"], 
+                ["高级运营专员", "高级文员"], 
+                ["高级程序员", "高级文员"],
+                ["项目副经理", "副主任二"], 
+                ["高级鉴定师", "主任二"], 
+                ["系统分析师", "主任二"],
+                ["其他", "操作层/实习生"], 
+                ["财务分析师", "主任二"], 
+                ["高级设计员", "高级文员"],
+                ["仓务", "文员"], 
+                ["高级系统分析师", "高级主任二"], 
+                ["业务分析师", "主任二"],
+                ["会计师", "主任二"], 
+                ["高级设计师", "主任二"], 
+                ["高级数字化专员", "高级文员"],
+                ["高级宝石分级员", "高级文员"], 
+                ["UI/UX设计员", "文员"], 
+                ["系统工程师", "主任二"],
+                ["高级总监", "高级总监"], 
+                ["高级秘书", "主任助理"], 
+                ["助理数据分析师", "高级文员"],
+                ["高级鉴定员", "高级文员"], 
+                ["高级流程管理师", "主任二"], 
+                ["副主任", "副主任"],
+                ["助理鉴定师", "高级文员"], 
+                ["高级数据分析师", "主任二"], 
+                ["高级资讯设备专员", "高级文员"],
+                ["业务分析员", "文员"], 
+                ["高级系统技术员", "高级文员"], 
+                ["高级业务分析师", "高级主任二"],
+                ["高级数据分析师", "高级主任二"], 
+                ["中级摄影员", "中级文员"], 
+                ["设计员", "文员"],
+                ["项目主任", "主任助理"], 
+                ["副主任设计师", "副主任二"], 
+                ["法律顾问", "主任二"],
+                ["总监", "总监"], 
+                ["数字化专员", "文员"], 
+                ["中级鉴定员", "中级文员"],
+                ["主任设计师", "主任二"], 
+                ["中级设计员", "中级文员"], 
+                ["数字化副总监", "副总监"],
+                ["高级设计专员", "高级文员"], 
+                ["高级数据分析专员", "高级文员"], 
+                ["全媒体运营师", "主任助理"],
+                ["清洁员", "操作层/实习生"], 
+                ["高级招商专员", "高级文员"], 
+                ["中级工程专员", "中级文员"],
+                ["文案策划师", "主任助理"], 
+                ["高级助理", "高级文员"], 
+                ["加盟商负责人", "操作层/实习生"],
+                ["高级数字化主任", "高级主任二"], 
+                ["高级供应商管理专员", "高级文员"], 
+                ["助理", "文员"],
+                ["高级业务分析员", "高级文员"], 
+                ["电商推广师", "主任助理"], 
+                ["中级培训师", "主任助理"],
+                ["高级电商推广师", "主任二"], 
+                ["高级法律专员", "高级文员"], 
+                ["高级大数据分析专员", "高级文员"],
+                ["中级设计专员", "中级文员"], 
+                ["大数据分析师", "主任二"], 
+                ["助理主播", "中级文员"],
+                ["高级文案", "高级文员"], 
+                ["鉴定员", "文员"], 
+                ["兼职", "操作层/实习生"],
+                ["高级主任", "高级主任"], 
+                ["主任助理", "主任助理"], 
+                ["文员", "文员"],
+                ["数据分析师", "主任二"], 
+                ["高级资讯安全工程师", "高级主任二"], 
+                ["大数据分析专员", "文员"],
+                ["中级人力资源专员", "中级文员"], 
+                ["数据分析员", "文员"], 
+                ["中级数据分析专员", "中级文员"],
+                ["摄影员", "文员"], 
+                ["资深主播", "主任助理"], 
+                ["人力资源专员", "文员"],
+                ["初级主播", "文员"], 
+                ["维修师", "副主任"], 
+                ["设计专员", "文员"],
+                ["人力资源管理师", "主任助理"], 
+                ["资讯安全工程师", "主任二"], 
+                ["文案", "文员"],
+                ["高级企管专员", "高级文员"], 
+                ["中级供应商管理专员", "中级文员"], 
+                ["维修员", "文员"],
+                ["法律专员", "文员"], 
+                ["总经理", "总经理"], 
+                ["高级经理", "高级经理"],
+                ["主创设计师", "经理二"], 
+                ["集团钟表总经理", "总经理"], 
+                ["助理HR资讯分析师", "高级文员"],
+                ["管理培训生（GMT）", "主任助理"], 
+                ["实习生", "操作层/实习生"], 
+                ["数据分析专员", "文员"],
+                ["副经理", "副经理"], 
+                ["顾问", "总经理"], 
+                ["报关师", "主任二"],
+                ["高级系统工程师", "高级主任二"], 
+                ["助理工程项目师", "高级文员"], 
+                ["经理", "经理"],
+                ["主任", "主任"], 
+                ["人力资源师", "主任二"], 
+                ["司机", "操作层/实习生"],
+                ["运营工程师", "主任二"], 
+                ["高级财务分析师", "高级主任二"], 
+                ["高级大数据分析师", "高级主任二"],
+                ["行政总经理", "总经理"], 
+                ["技术副总经理", "副总经理"], 
+                ["副总经理", "副总经理"],
+                ["高级运营工程师", "高级主任二"], 
+                ["高级工程专员", "高级文员"], 
+                ["常务副总经理", "副总经理"],
+                ["高级工程项目师", "主任二"], 
+                ["助理珠宝分级师", "高级文员"], 
+                ["工程项目师", "主任助理"],
+                ["高级主任设计师", "高级主任二"], 
+                ["业务总经理", "总经理"], 
+                ["资深鉴定师", "经理二"],
+                ["高级项目经理", "高级主任二"], 
+                ["高级主任摄影师", "高级主任二"], 
+                ["招商主任", "主任二"],
+                ["产品经理", "经理二"],
+                ["视觉设计师", "主任助理"],
+                ["渠道运营", "文员"],
+                ["综合管理", "文员"],
+                ["工程师", "主任二"],
+                ["品牌专员", "文员"],
+                ["高级工程师", "高级主任二"],
+                ["高级品牌经理", "高级经理二"],
+                ["高级培训师", "主任二"]
+            ];
+            
+            gradeData.forEach(([position, grade]) => {
+                positionGradeMap.set(position, grade);
+            });
+        }
+
+        loadFromStorage();
+        if (positionGradeMap.size === 0) {
+            initPositionGradeMap();
+        }
+
+        let currentRole = 'admin';
+        let adminAuthenticated = true;
+
+        const contentDiv = document.getElementById('dynamicContent');
+        const btnTrainee = document.getElementById('btnTrainee');
+        const btnAdmin = document.getElementById('btnAdmin');
+        const deadlineSpan = document.getElementById('deadlineDisplay');
+        const modal = document.getElementById('passwordModal');
+        const userInput = document.getElementById('adminUserInput');
+        const passwordInput = document.getElementById('adminPasswordInput');
+        const cancelBtn = document.getElementById('cancelPasswordBtn');
+        const submitBtn = document.getElementById('submitPasswordBtn');
+        const toastContainer = document.getElementById('successToastContainer');
+
+        function updateDeadlineDisplay() {
+            deadlineSpan.innerText = deadline ? deadline.replace('T',' ') : '未设置';
+        }
+        updateDeadlineDisplay();
+
+        function showSuccessToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'success-toast';
+            toast.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+            toastContainer.appendChild(toast);
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        function findEmployeeByEmpId(empId) {
+            return untrainedEmployees.find(e => String(e.工号) === String(empId));
+        }
+
+        function isAlreadySubmitted(empId, course) {
+            return submissions.some(s => s.工号 === empId && s.课程 === course);
+        }
+
+        function getSubmittedCourses(empId) {
+            return submissions
+                .filter(s => s.工号 === empId)
+                .map(s => s.课程);
+        }
+
+        function getGradeByPosition(position) {
+            if (!position || position === '未填写') return '未填写';
+            const grade = positionGradeMap.get(position);
+            return grade || position;
+        }
+
+        function getDeptUntilSecondDash(fullDept) {
+            if (!fullDept || typeof fullDept !== 'string') return fullDept;
+            const parts = fullDept.split('-');
+            if (parts.length >= 3) {
+                return parts[0] + '-' + parts[1];
+            }
+            return fullDept;
+        }
+
+        function exportToExcel(data, sheetName, fileName) {
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, sheetName);
+            XLSX.writeFile(wb, fileName);
+        }
+
+        // ========== 培训对口人界面 ==========
+        function renderTrainee() {
+            const emptyPosCount = untrainedEmployees.filter(emp => {
+                return !emp.职务 || emp.职务.trim() === '' || emp.职务 === 'null' || emp.职务 === 'undefined' || emp.职务 === '未填写';
+            }).length;
+            
+            function buildExcelTable() {
+                let rows = '';
+                untrainedEmployees.forEach(emp => {
+                    const hasPosition = emp.职务 && emp.职务.trim() !== '' && emp.职务 !== 'null' && emp.职务 !== 'undefined' && emp.职务 !== '未填写';
+                    rows += `<tr>
+                        <td><span class="selectable-id" style="color:#b33a3a; font-weight:600; cursor:pointer;" data-emp-id="${emp.工号}">${emp.工号 || ''}</span></td>
+                        <td>${emp.姓名 || ''}</td>
+                        <td>${emp.部门 || ''}</td>
+                        <td style="${!hasPosition ? 'color:#999; font-style:italic;' : ''}">${hasPosition ? emp.职务 : '未填写'}</td>
+                    </tr>`;
+                });
+
+                return `
+                    <div class="excel-table-container">
+                        <table class="excel-table" id="excelTable">
+                            <thead>
+                                <tr class="filter-row">
+                                    <td><input type="text" id="filterId" placeholder="筛选工号"></td>
+                                    <td><input type="text" id="filterName" placeholder="筛选姓名"></td>
+                                    <td><input type="text" id="filterDept" placeholder="筛选部门"></td>
+                                    <td><input type="text" id="filterPos" placeholder="筛选职务"></td>
+                                </tr>
+                                <tr>
+                                    <th>工号</th>
+                                    <th>姓名</th>
+                                    <th>部门</th>
+                                    <th>职务</th>
+                                </tr>
+                            </thead>
+                            <tbody id="excelTableBody">
+                                ${rows}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            function buildMultiCourseSection() {
+                if (!currentSelectedEmpId) {
+                    return `
+                        <div class="multi-course-card">
+                            <div class="multi-course-header">
+                                <h3><i class="fas fa-layer-group"></i> 批量选择课程</h3>
+                            </div>
+                            <div style="text-align:center; padding:30px; color:#666;">
+                                <i class="fas fa-hand-pointer" style="font-size:2rem; margin-bottom:10px;"></i>
+                                <p>请在表格中点击工号选择员工，然后勾选需要报名的课程</p>
+                                <p style="font-size:0.9rem; margin-top:10px;">可以自由选择部分课程，无需全选</p>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                const emp = findEmployeeByEmpId(currentSelectedEmpId);
+                if (!emp) return '';
+
+                const submittedCourses = getSubmittedCourses(currentSelectedEmpId);
+
+                let courseGrid = '';
+                courses.forEach((course) => {
+                    const savedSelection = currentCourseSelections.find(s => s.course === course);
+                    const selectedModule = savedSelection ? savedSelection.module : moduleOptions[0];
+                    const selectedMonth = savedSelection ? savedSelection.month : monthOptions[0];
+                    const isSubmitted = submittedCourses.includes(course);
+                    
+                    courseGrid += `
+                        <div class="course-item" style="${isSubmitted ? 'opacity:0.6;' : ''}">
+                            <div class="course-checkbox">
+                                <input type="checkbox" class="course-check" 
+                                       data-course="${course}" 
+                                       value="${course}" 
+                                       ${savedSelection ? 'checked' : ''} 
+                                       ${isSubmitted ? 'disabled' : ''}
+                                       id="course_${course}">
+                                <label for="course_${course}" style="${isSubmitted ? 'color:#999;' : ''}">
+                                    ${course}
+                                    ${isSubmitted ? '<span style="margin-left:8px; font-size:0.8rem; color:#e68a00;">(已报名)</span>' : ''}
+                                </label>
+                            </div>
+                            <div class="course-selects">
+                                <select class="module-select" data-course="${course}" data-type="module" ${!savedSelection && !isSubmitted ? 'disabled' : ''}>
+                                    ${moduleOptions.map(m => `<option value="${m}" ${selectedModule === m ? 'selected' : ''}>模块${m}</option>`).join('')}
+                                </select>
+                                <select class="month-select" data-course="${course}" data-type="month" ${!savedSelection && !isSubmitted ? 'disabled' : ''}>
+                                    ${monthOptions.map(m => `<option value="${m}" ${selectedMonth === m ? 'selected' : ''}>${m}</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                const availableCourses = courses.filter(c => !submittedCourses.includes(c));
+                const selectedCount = currentCourseSelections.length;
+
+                return `
+                    <div class="multi-course-card">
+                        <div class="multi-course-header">
+                            <h3><i class="fas fa-layer-group"></i> 批量选择课程</h3>
+                            <span class="selected-emp-info"><i class="fas fa-user"></i> ${emp.姓名} (${emp.工号}) · 职务: ${emp.职务 && emp.职务 !== '未填写' ? emp.职务 : '未填写'}</span>
+                        </div>
+                        
+                        <div class="course-stats">
+                            <span class="stat-item"><i class="fas fa-book"></i> 可选课程：${availableCourses.length}门</span>
+                            <span class="stat-item"><i class="fas fa-check-circle" style="color:#b33a3a;"></i> 已选：${selectedCount}门</span>
+                            ${submittedCourses.length > 0 ? `<span class="stat-item"><i class="fas fa-history" style="color:#e68a00;"></i> 已报名：${submittedCourses.length}门</span>` : ''}
+                        </div>
+                        
+                        <div class="course-grid">
+                            ${courseGrid}
+                        </div>
+                        
+                        ${selectedCount > 0 ? `
+                            <div class="selected-summary">
+                                <span><i class="fas fa-check-circle" style="color:#b33a3a;"></i> 已选课程：</span>
+                                ${currentCourseSelections.map(s => `<span class="selected-badge">${s.course} · ${s.month} · 模块${s.module}</span>`).join('')}
+                            </div>
+                        ` : ''}
+                        
+                        <div style="display:flex; gap:15px; margin-top:20px; justify-content:flex-end;">
+                            <button class="btn-outline btn" id="clearMultiSelections"><i class="fas fa-times"></i> 清空选择</button>
+                            <button class="btn btn-primary" id="submitMultiCourses" ${selectedCount === 0 ? 'disabled' : ''}>
+                                <i class="fas fa-paper-plane"></i> 批量提交 (${selectedCount})
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            function buildManualForm() {
+                return `
+                    <div class="form-card">
+                        <h3 style="margin-bottom:20px;"><i class="fas fa-pencil-alt"></i> 单次报名 (手动填写)</h3>
+                        <div class="form-grid">
+                            <div class="field-group"><label>工号 <span style="color:red;">*</span></label><input type="text" id="empIdInput" placeholder="如 10000246" autocomplete="off"></div>
+                            <div class="field-group"><label>姓名 <span style="color:red;">*</span></label><input type="text" id="nameInput" placeholder="填写姓名"></div>
+                            <div class="field-group"><label>部门 <span style="color:red;">*</span></label><input type="text" id="deptInput" placeholder="部门名称"></div>
+                            <div class="field-group"><label>职务</label><input type="text" id="posInput" placeholder="填写职务"></div>
+                            <div class="field-group"><label>课程编码</label><select id="courseSelect">${courses.map(c => `<option>${c}</option>`).join('')}</select></div>
+                            <div class="field-group"><label>月份</label><select id="monthSelect">${monthOptions.map(m => `<option>${m}</option>`).join('')}</select></div>
+                            <div class="field-group"><label>模块</label><select id="moduleSelect">${moduleOptions.map(m => `<option>${m}</option>`).join('')}</select></div>
+                        </div>
+                        <div class="submit-feedback">
+                            <button class="btn btn-primary" id="singleSubmitBtn"><i class="fas fa-paper-plane"></i> 提交报名</button>
+                            <span id="singleFeedbackMsg" class="feedback-msg" style="display:none;"><i class="fas fa-check-circle"></i> 提交成功</span>
+                        </div>
+                        <div style="margin-top:16px; font-size:0.9rem; background:#f5f5f5; border-radius:30px; padding:10px 18px;">
+                            <i class="fas fa-lightbulb"></i> 手动填写信息。若工号匹配未培训名单，提交后将自动移除。
+                        </div>
+                    </div>
+                `;
+            }
+
+            function buildSubmissionsTable() {
+                if (submissions.length === 0) {
+                    return `<div style="text-align:center; padding:30px; color:#666;">暂无已提交的报名信息</div>`;
+                }
+
+                const sortedSubs = [...submissions].sort((a, b) => new Date(b.提交时间) - new Date(a.提交时间));
+                
+                return `
+                    <div class="submissions-table-container">
+                        <table class="submissions-table">
+                            <thead>
+                                <tr>
+                                    <th>工号</th>
+                                    <th>姓名</th>
+                                    <th>部门</th>
+                                    <th>职务</th>
+                                    <th>课程</th>
+                                    <th>月份</th>
+                                    <th>模块</th>
+                                    <th>提交时间</th>
+                                    <th>状态</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${sortedSubs.map(sub => `
+                                    <tr>
+                                        <td>${sub.工号}</td>
+                                        <td>${sub.姓名}</td>
+                                        <td>${getDeptUntilSecondDash(sub.部门)}</td>
+                                        <td>${sub.职务 && sub.职务 !== '未填写' ? sub.职务 : '<span style="color:#999; font-style:italic;">未填写</span>'}</td>
+                                        <td>${sub.课程}</td>
+                                        <td>${sub.月份}</td>
+                                        <td>${sub.模块}</td>
+                                        <td>${new Date(sub.提交时间).toLocaleString()}</td>
+                                        <td><span class="status-badge ${sub.审核状态 === '已审核' ? 'approved' : ''}">${sub.审核状态}</span></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            // 显示当前共享信息
+            const shareInfo = shareId ? `
+                <div class="cloud-share-section" style="background: #fff3e0; border-color: #ff9800;">
+                    <div class="cloud-share-title">
+                        <i class="fas fa-share-alt"></i> 当前共享会话
+                    </div>
+                    <div class="share-id-display">
+                        <i class="fas fa-key"></i> 共享ID: ${shareId}
+                    </div>
+                    <div class="cloud-share-note">
+                        ⚠️ 您的报名数据会自动同步到共享存储
+                    </div>
+                </div>
+            ` : '';
+
+            let html = `
+                ${shareInfo}
+                <div class="note-highlight">
+                    <i class="fas fa-info-circle"></i> 当前未培训总人数：<strong>${untrainedEmployees.length}</strong> 
+                    ${emptyPosCount > 0 ? `<span style="margin-left:15px; color:#e68a00;"><i class="fas fa-exclamation-triangle"></i> 有 ${emptyPosCount} 人职务信息待补充</span>` : ''}
+                </div>
+
+                <div class="reference-section">
+                    <div class="section-title"><i class="fas fa-table"></i> 未培训人员名单 (点击工号选择)</div>
+                    ${buildExcelTable()}
+                </div>
+
+                ${buildMultiCourseSection()}
+                ${buildManualForm()}
+
+                <div class="submissions-section">
+                    <h3 style="margin-bottom:20px;"><i class="fas fa-history"></i> 已提交报名信息</h3>
+                    ${buildSubmissionsTable()}
+                </div>
+            `;
+            contentDiv.innerHTML = html;
+
+            // 表格筛选功能
+            const filterId = document.getElementById('filterId');
+            const filterName = document.getElementById('filterName');
+            const filterDept = document.getElementById('filterDept');
+            const filterPos = document.getElementById('filterPos');
+            const tbody = document.getElementById('excelTableBody');
+
+            function filterTable() {
+                const idVal = filterId.value.toLowerCase();
+                const nameVal = filterName.value.toLowerCase();
+                const deptVal = filterDept.value.toLowerCase();
+                const posVal = filterPos.value.toLowerCase();
+
+                const filtered = untrainedEmployees.filter(emp => {
+                    return (emp.工号?.toLowerCase().includes(idVal) ?? true) &&
+                           (emp.姓名?.toLowerCase().includes(nameVal) ?? true) &&
+                           (emp.部门?.toLowerCase().includes(deptVal) ?? true) &&
+                           ((emp.职务 || '').toLowerCase().includes(posVal) ?? true);
+                });
+
+                tbody.innerHTML = filtered.map(emp => {
+                    const hasPosition = emp.职务 && emp.职务.trim() !== '' && emp.职务 !== 'null' && emp.职务 !== 'undefined' && emp.职务 !== '未填写';
+                    return `
+                    <tr>
+                        <td><span class="selectable-id" style="color:#b33a3a; font-weight:600; cursor:pointer;" data-emp-id="${emp.工号}">${emp.工号 || ''}</span></td>
+                        <td>${emp.姓名 || ''}</td>
+                        <td>${emp.部门 || ''}</td>
+                        <td style="${!hasPosition ? 'color:#999; font-style:italic;' : ''}">${hasPosition ? emp.职务 : '未填写'}</td>
+                    </tr>
+                `}).join('');
+                
+                document.querySelectorAll('.selectable-id').forEach(el => {
+                    el.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const empId = this.getAttribute('data-emp-id');
+                        selectEmployee(empId);
+                    });
+                });
+            }
+
+            [filterId, filterName, filterDept, filterPos].forEach(input => {
+                if (input) input.addEventListener('input', filterTable);
+            });
+
+            window.selectEmployee = function(empId) {
+                currentSelectedEmpId = empId;
+                const emp = findEmployeeByEmpId(empId);
+                if (emp) {
+                    currentCourseSelections = [];
+                    renderTrainee();
+                    showSuccessToast(`已选择员工 ${emp.姓名}`);
+                }
+            };
+
+            document.querySelectorAll('.selectable-id').forEach(el => {
+                el.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const empId = this.getAttribute('data-emp-id');
+                    selectEmployee(empId);
+                });
+            });
+
+            setTimeout(() => {
+                function updateSelections() {
+                    const newSelections = [];
+                    document.querySelectorAll('.course-check:checked').forEach(cb => {
+                        const course = cb.value;
+                        const moduleSelect = document.querySelector(`.module-select[data-course="${course}"]`);
+                        const monthSelect = document.querySelector(`.month-select[data-course="${course}"]`);
+                        
+                        if (cb.checked) {
+                            newSelections.push({
+                                course: course,
+                                module: moduleSelect ? moduleSelect.value : moduleOptions[0],
+                                month: monthSelect ? monthSelect.value : monthOptions[0]
+                            });
+                        }
+                        
+                        if (moduleSelect) moduleSelect.disabled = !cb.checked;
+                        if (monthSelect) monthSelect.disabled = !cb.checked;
+                    });
+                    
+                    currentCourseSelections = newSelections;
+                    
+                    const submitBtn = document.getElementById('submitMultiCourses');
+                    if (submitBtn) {
+                        submitBtn.innerHTML = `<i class="fas fa-paper-plane"></i> 批量提交 (${currentCourseSelections.length})`;
+                        submitBtn.disabled = currentCourseSelections.length === 0;
+                    }
+                }
+
+                document.querySelectorAll('.course-check').forEach(cb => {
+                    cb.addEventListener('change', updateSelections);
+                    const course = cb.value;
+                    const moduleSelect = document.querySelector(`.module-select[data-course="${course}"]`);
+                    const monthSelect = document.querySelector(`.month-select[data-course="${course}"]`);
+                    if (moduleSelect) moduleSelect.disabled = !cb.checked;
+                    if (monthSelect) monthSelect.disabled = !cb.checked;
+                });
+
+                document.querySelectorAll('.module-select, .month-select').forEach(select => {
+                    select.addEventListener('change', updateSelections);
+                });
+
+                const clearBtn = document.getElementById('clearMultiSelections');
+                if (clearBtn) {
+                    clearBtn.addEventListener('click', function() {
+                        document.querySelectorAll('.course-check').forEach(cb => {
+                            cb.checked = false;
+                            const course = cb.value;
+                            const moduleSelect = document.querySelector(`.module-select[data-course="${course}"]`);
+                            const monthSelect = document.querySelector(`.month-select[data-course="${course}"]`);
+                            if (moduleSelect) moduleSelect.disabled = true;
+                            if (monthSelect) monthSelect.disabled = true;
+                        });
+                        currentCourseSelections = [];
+                        renderTrainee();
+                    });
+                }
+
+                const submitMultiBtn = document.getElementById('submitMultiCourses');
+                if (submitMultiBtn) {
+                    submitMultiBtn.addEventListener('click', function() {
+                        if (!currentSelectedEmpId) {
+                            alert('请先选择员工');
+                            return;
+                        }
+                        if (currentCourseSelections.length === 0) {
+                            alert('请至少选择一门课程');
+                            return;
+                        }
+                        if (deadline && new Date() > new Date(deadline)) {
+                            alert('报名已截止'); 
+                            return;
+                        }
+
+                        const emp = findEmployeeByEmpId(currentSelectedEmpId);
+                        if (!emp) {
+                            alert('员工信息不存在');
+                            return;
+                        }
+
+                        const duplicateCourses = [];
+                        const newSubmissions = [];
+                        
+                        currentCourseSelections.forEach(sel => {
+                            if (isAlreadySubmitted(currentSelectedEmpId, sel.course)) {
+                                duplicateCourses.push(sel.course);
+                            } else {
+                                newSubmissions.push({
+                                    id: Date.now() + '-' + Math.random().toString(36).substr(2,8) + '-' + sel.course,
+                                    工号: emp.工号,
+                                    姓名: emp.姓名,
+                                    部门: emp.部门,
+                                    职务: emp.职务 || '未填写',
+                                    课程: sel.course,
+                                    月份: sel.month,
+                                    模块: sel.module,
+                                    提交时间: new Date().toISOString(),
+                                    审核状态: '待审核',
+                                    请假状态: ''
+                                });
+                            }
+                        });
+
+                        if (duplicateCourses.length > 0) {
+                            alert(`以下课程已报名，不能重复提交：${duplicateCourses.join('、')}`);
+                            if (newSubmissions.length === 0) return;
+                        }
+
+                        submissions.push(...newSubmissions);
+                        
+                        // 保存到本地和共享存储
+                        if (shareId) {
+                            saveSharedData(shareId);
+                        } else {
+                            saveToStorage();
+                        }
+
+                        currentCourseSelections = [];
+                        showSuccessToast(`成功提交 ${newSubmissions.length} 门课程报名`);
+                        renderTrainee();
+                    });
+                }
+            }, 100);
+
+            const empIdInp = document.getElementById('empIdInput');
+            const nameInp = document.getElementById('nameInput');
+            const deptInp = document.getElementById('deptInput');
+            const posInp = document.getElementById('posInput');
+            const singleSubmitBtn = document.getElementById('singleSubmitBtn');
+            const singleFeedback = document.getElementById('singleFeedbackMsg');
+
+            if (empIdInp) {
+                empIdInp.addEventListener('blur', function() {
+                    const empId = this.value.trim();
+                    if (!empId) return;
+                    const emp = findEmployeeByEmpId(empId);
+                    if (emp) {
+                        nameInp.value = emp.姓名 || '';
+                        deptInp.value = emp.部门 || '';
+                        posInp.value = emp.职务 || '';
+                        selectEmployee(empId);
+                    }
+                });
+            }
+
+            if (singleSubmitBtn) {
+                singleSubmitBtn.addEventListener('click', function() {
+                    const empId = empIdInp.value.trim();
+                    const name = nameInp.value.trim();
+                    const dept = deptInp.value.trim();
+                    const pos = posInp.value.trim();
+                    const course = document.getElementById('courseSelect').value;
+                    const month = document.getElementById('monthSelect').value;
+                    const mod = document.getElementById('moduleSelect').value;
+
+                    if (!empId || !name || !dept) {
+                        alert('请填写工号、姓名、部门（均为必填）');
+                        return;
+                    }
+                    if (deadline && new Date() > new Date(deadline)) {
+                        alert('报名已截止'); 
+                        return;
+                    }
+                    if (isAlreadySubmitted(empId, course)) {
+                        alert('该员工已报名此课程，请勿重复');
+                        return;
+                    }
+
+                    const newSub = {
+                        id: Date.now() + '-' + Math.random().toString(36).substr(2,8),
+                        工号: empId, 
+                        姓名: name, 
+                        部门: dept, 
+                        职务: pos || '未填写', 
+                        课程: course, 
+                        月份: month, 
+                        模块: mod,
+                        提交时间: new Date().toISOString(),
+                        审核状态: '待审核',
+                        请假状态: ''
+                    };
+                    submissions.push(newSub);
+
+                    const idx = untrainedEmployees.findIndex(e => String(e.工号) === String(empId));
+                    if (idx !== -1) {
+                        untrainedEmployees.splice(idx, 1);
+                    }
+
+                    // 保存到本地和共享存储
+                    if (shareId) {
+                        saveSharedData(shareId);
+                    } else {
+                        saveToStorage();
+                    }
+
+                    if (singleFeedback) {
+                        singleFeedback.style.display = 'inline-flex';
+                        showSuccessToast('报名提交成功');
+                        setTimeout(() => singleFeedback.style.display = 'none', 2000);
+                    }
+
+                    empIdInp.value = ''; 
+                    nameInp.value = ''; 
+                    deptInp.value = ''; 
+                    posInp.value = '';
+
+                    renderTrainee();
+                });
+            }
+        }
+
+        // ========== 管理员看板 ==========
+        function renderAdmin() {
+            // 根据历史筛选条件过滤 submissions
+            let filteredSubs = [...submissions];
+
+            function getQuarter(monthStr) {
+                if (!monthStr) return null;
+                const m = parseInt(monthStr.split('-')[1]);
+                if (m >= 4 && m <= 6) return 'Q2';
+                if (m >= 7 && m <= 9) return 'Q3';
+                if (m >= 10 && m <= 12) return 'Q4';
+                if (m >= 1 && m <= 3) return 'Q1';
+                return null;
+            }
+
+            if (historyYear !== 'all') {
+                filteredSubs = filteredSubs.filter(s => s.月份 && s.月份.startsWith(historyYear));
+            }
+            if (historyQuarter !== 'all') {
+                filteredSubs = filteredSubs.filter(s => s.月份 && getQuarter(s.月份) === historyQuarter);
+            }
+            if (historyMonth !== 'all') {
+                filteredSubs = filteredSubs.filter(s => s.月份 === historyMonth);
+            }
+            
+            if (historyGrade !== 'all') {
+                filteredSubs = filteredSubs.filter(s => {
+                    const grade = getGradeByPosition(s.职务);
+                    return grade === historyGrade;
+                });
+            }
+
+            const pendingSubs = filteredSubs.filter(s => s.审核状态 === '待审核');
+            const approvedSubs = filteredSubs.filter(s => s.审核状态 === '已审核');
+
+            // 获取所有部门列表
+            const allDepts = [...new Set(approvedSubs.map(s => getDeptUntilSecondDash(s.部门)))].sort();
+            
+            // 获取所有职级列表
+            const allGrades = [...new Set(approvedSubs.map(s => {
+                const grade = getGradeByPosition(s.职务);
+                return grade;
+            }))].filter(g => g !== '未填写' && g !== '其他').sort();
+            
+            // 根据部门筛选
+            let displayApprovedSubs = approvedSubs;
+            if (selectedDept !== 'all') {
+                displayApprovedSubs = approvedSubs.filter(s => getDeptUntilSecondDash(s.部门) === selectedDept);
+            }
+
+            // 职级分布统计
+            const gradeCount = {};
+            const gradePeopleSet = new Set();
+            
+            approvedSubs.forEach(sub => {
+                if (sub.职务 && sub.职务 !== '未填写' && sub.职务 !== '') {
+                    const grade = getGradeByPosition(sub.职务);
+                    if (!gradePeopleSet.has(sub.工号)) {
+                        gradeCount[grade] = (gradeCount[grade] || 0) + 1;
+                        gradePeopleSet.add(sub.工号);
+                    }
+                }
+            });
+
+            // 课程分布统计
+            const courseCount = {};
+            const coursePeopleSet = new Set();
+            
+            approvedSubs.forEach(sub => {
+                if (sub.课程) {
+                    const uniqueKey = sub.工号 + '_' + sub.课程;
+                    if (!coursePeopleSet.has(uniqueKey)) {
+                        courseCount[sub.课程] = (courseCount[sub.课程] || 0) + 1;
+                        coursePeopleSet.add(uniqueKey);
+                    }
+                }
+            });
+
+            // 报名进度
+            const deptPeopleMap = new Map();
+            approvedSubs.forEach(sub => {
+                if (!sub.部门) return;
+                const shortDept = getDeptUntilSecondDash(sub.部门);
+                if (!deptPeopleMap.has(shortDept)) {
+                    deptPeopleMap.set(shortDept, new Set());
+                }
+                deptPeopleMap.get(shortDept).add(sub.工号);
+            });
+
+            const totalPeople = gradePeopleSet.size;
+            
+            const deptStats = [];
+            for (let [dept, peopleSet] of deptPeopleMap.entries()) {
+                deptStats.push({
+                    dept: dept,
+                    count: peopleSet.size,
+                    percentage: totalPeople > 0 ? Math.round((peopleSet.size / totalPeople) * 100) : 0
+                });
+            }
+            deptStats.sort((a, b) => b.count - a.count);
+
+            // 部门报名人数
+            const actualAttendees = approvedSubs.filter(sub => !sub.请假状态);
+            const deptActualMap = new Map();
+            actualAttendees.forEach(sub => {
+                if (!sub.部门) return;
+                const shortDept = getDeptUntilSecondDash(sub.部门);
+                if (!deptActualMap.has(shortDept)) {
+                    deptActualMap.set(shortDept, new Set());
+                }
+                deptActualMap.get(shortDept).add(sub.工号);
+            });
+
+            const deptActualData = [];
+            for (let [dept, peopleSet] of deptActualMap.entries()) {
+                deptActualData.push({
+                    dept: dept,
+                    count: peopleSet.size
+                });
+            }
+            deptActualData.sort((a, b) => b.count - a.count);
+
+            const hasGradeData = Object.keys(gradeCount).length > 0;
+            const hasCourseData = Object.keys(courseCount).length > 0;
+
+            // 生成年份选项
+            const yearsSet = new Set();
+            submissions.forEach(s => { if (s.月份) yearsSet.add(s.月份.substring(0,4)); });
+            const years = ['all', ...Array.from(yearsSet).sort()];
+
+            // 构建可编辑的已审核名单表格
+            function buildEditableApprovedTable() {
+                if (displayApprovedSubs.length === 0) {
+                    return `<div class="empty-warning">暂无已审核的报名记录</div>`;
+                }
+
+                return `
+                    <div class="editable-table-container" style="max-height: 400px; overflow: auto;">
+                        <table class="editable-table">
+                            <thead>
+                                <tr>
+                                    <th>工号</th>
+                                    <th>姓名</th>
+                                    <th>部门</th>
+                                    <th>职务</th>
+                                    <th>职级</th>
+                                    <th>课程</th>
+                                    <th>月份</th>
+                                    <th>模块</th>
+                                    <th>提交时间</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${displayApprovedSubs.map(sub => {
+                                    const isEditing = editingSubmissionId === sub.id;
+                                    const grade = getGradeByPosition(sub.职务);
+                                    if (isEditing) {
+                                        return `
+                                            <tr>
+                                                <td><input type="text" id="edit_工号" value="${sub.工号}" placeholder="工号"></td>
+                                                <td><input type="text" id="edit_姓名" value="${sub.姓名}" placeholder="姓名"></td>
+                                                <td><input type="text" id="edit_部门" value="${sub.部门}" placeholder="部门"></td>
+                                                <td><input type="text" id="edit_职务" value="${sub.职务 || ''}" placeholder="职务"></td>
+                                                <td>${grade}</td>
+                                                <td>
+                                                    <select id="edit_课程">
+                                                        ${courses.map(c => `<option value="${c}" ${sub.课程 === c ? 'selected' : ''}>${c}</option>`).join('')}
+                                                    </select>
+                                                </td>
+                                                <td>
+                                                    <select id="edit_月份">
+                                                        ${monthOptions.map(m => `<option value="${m}" ${sub.月份 === m ? 'selected' : ''}>${m}</option>`).join('')}
+                                                    </select>
+                                                </td>
+                                                <td>
+                                                    <select id="edit_模块">
+                                                        ${moduleOptions.map(m => `<option value="${m}" ${sub.模块 === m ? 'selected' : ''}>模块${m}</option>`).join('')}
+                                                    </select>
+                                                </td>
+                                                <td>${new Date(sub.提交时间).toLocaleString()}</td>
+                                                <td>
+                                                    <select id="edit_请假状态">
+                                                        <option value="" ${!sub.请假状态 ? 'selected' : ''}>正常</option>
+                                                        <option value="请假" ${sub.请假状态 === '请假' ? 'selected' : ''}>请假</option>
+                                                    </select>
+                                                </td>
+                                                <td class="edit-actions">
+                                                    <button class="btn-save" onclick="saveEdit('${sub.id}')">保存</button>
+                                                    <button class="btn-cancel" onclick="cancelEdit()">取消</button>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    } else {
+                                        return `
+                                            <tr>
+                                                <td>${sub.工号}</td>
+                                                <td>${sub.姓名}</td>
+                                                <td>${getDeptUntilSecondDash(sub.部门)}</td>
+                                                <td>${sub.职务 || '-'}</td>
+                                                <td><span class="position-badge">${grade}</span></td>
+                                                <td>${sub.课程}</td>
+                                                <td>${sub.月份}</td>
+                                                <td>${sub.模块}</td>
+                                                <td>${new Date(sub.提交时间).toLocaleString()}</td>
+                                                <td>
+                                                    ${sub.请假状态 ? `<span class="leave-badge">${sub.请假状态}</span>` : '正常'}
+                                                </td>
+                                                <td class="edit-actions">
+                                                    <button class="btn-edit" onclick="startEdit('${sub.id}')"><i class="fas fa-edit"></i> 编辑</button>
+                                                    <button class="btn-leave" onclick="toggleLeave('${sub.id}')"><i class="fas fa-calendar-times"></i> 请假</button>
+                                                    <button class="btn-delete" onclick="deleteSubmission('${sub.id}')"><i class="fas fa-trash"></i> 删除</button>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            // 构建实际参训名单表格
+            function buildActualAttendanceTable() {
+                const actualAttendees = approvedSubs.filter(sub => !sub.请假状态);
+                
+                if (actualAttendees.length === 0) {
+                    return `<div class="empty-warning">暂无实际参训人员</div>`;
+                }
+
+                return `
+                    <div class="editable-table-container" style="max-height: 400px; overflow: auto;">
+                        <table class="editable-table">
+                            <thead>
+                                <tr>
+                                    <th>工号</th>
+                                    <th>姓名</th>
+                                    <th>部门</th>
+                                    <th>职务</th>
+                                    <th>职级</th>
+                                    <th>课程</th>
+                                    <th>月份</th>
+                                    <th>模块</th>
+                                    <th>状态</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${actualAttendees.map(sub => {
+                                    const grade = getGradeByPosition(sub.职务);
+                                    return `
+                                        <tr>
+                                            <td>${sub.工号}</td>
+                                            <td>${sub.姓名}</td>
+                                            <td>${getDeptUntilSecondDash(sub.部门)}</td>
+                                            <td>${sub.职务 || '-'}</td>
+                                            <td><span class="position-badge">${grade}</span></td>
+                                            <td>${sub.课程}</td>
+                                            <td>${sub.月份}</td>
+                                            <td>${sub.模块}</td>
+                                            <td>正常</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            // 云端分享面板
+            const sharePanel = `
+                <div class="cloud-share-section">
+                    <div class="cloud-share-title">
+                        <i class="fas fa-cloud-upload-alt"></i> 数据共享
+                    </div>
+                    <div class="cloud-share-note">
+                        1. 上传未培名单后，点击"创建共享会话"生成分享ID<br>
+                        2. 将链接发送给各部门对口人<br>
+                        3. 对口人打开链接即可看到名单并进行报名<br>
+                        4. 所有报名数据自动同步
+                    </div>
+                    ${shareId ? `
+                        <div class="share-id-display">
+                            <i class="fas fa-key"></i> 当前共享ID: ${shareId}
+                        </div>
+                        <div class="share-link-display">
+                            <i class="fas fa-link"></i> ${window.location.href.split('?')[0]}?share=${shareId}
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-primary" id="copyShareLinkBtn">
+                                <i class="fas fa-copy"></i> 复制链接
+                            </button>
+                            <button class="btn btn-outline" id="refreshShareBtn">
+                                <i class="fas fa-sync"></i> 刷新数据
+                            </button>
+                        </div>
+                    ` : `
+                        <button class="btn btn-primary" id="createShareBtn">
+                            <i class="fas fa-cloud-upload-alt"></i> 创建共享会话
+                        </button>
+                    `}
+                </div>
+            `;
+
+            let html = `
+                <div class="init-section">
+                    <div class="init-grid">
+                        <div class="file-upload-group">
+                            <span style="font-weight:600;"><i class="fas fa-database"></i> 初始化：</span>
+                            <label class="file-label"><i class="fas fa-upload"></i> 上传未培名单<input type="file" id="uploadUntrained" accept=".csv,.xlsx,.xls"></label>
+                            <button class="btn-outline btn" id="clearStorageBtn"><i class="fas fa-rotate-left"></i>重置演示</button>
+                        </div>
+                        <div class="deadline-set">
+                            <input type="datetime-local" id="deadlinePicker" value="${deadline || ''}">
+                            <button class="btn btn-primary" id="setDeadlineBtn"><i class="fas fa-clock"></i>设置截止</button>
+                        </div>
+                    </div>
+                    <div style="margin-top:15px; background: #f0f0f0; padding:10px 20px; border-radius:30px; display:flex; justify-content:space-between; border:1px solid #b33a3a;">
+                        <span><i class="fas fa-info-circle" style="color:#b33a3a;"></i> 当前未培训人数：${untrainedEmployees.length} 人</span>
+                        <span><i class="fas fa-check-circle" style="color:#b33a3a;"></i> 已报名总数：${submissions.length} 人</span>
+                    </div>
+                    <div id="uploadSuccessMsg" style="display:none;" class="upload-success">
+                        <i class="fas fa-check-circle"></i> 文件上传成功
+                    </div>
+                </div>
+
+                ${sharePanel}
+
+                <div class="history-filter">
+                    <span class="filter-label" style="font-weight:600;"><i class="fas fa-clock-rotate-left"></i> 历史数据筛选：</span>
+                    <div class="filter-group">
+                        <select id="filterYear">${years.map(y => `<option value="${y}" ${historyYear===y?'selected':''}>${y==='all'?'全部年份':y}</option>`).join('')}</select>
+                        <select id="filterQuarter">
+                            <option value="all" ${historyQuarter==='all'?'selected':''}>全部季度</option>
+                            <option value="Q1" ${historyQuarter==='Q1'?'selected':''}>Q1 (1-3月)</option>
+                            <option value="Q2" ${historyQuarter==='Q2'?'selected':''}>Q2 (4-6月)</option>
+                            <option value="Q3" ${historyQuarter==='Q3'?'selected':''}>Q3 (7-9月)</option>
+                            <option value="Q4" ${historyQuarter==='Q4'?'selected':''}>Q4 (10-12月)</option>
+                        </select>
+                        <select id="filterMonth">
+                            <option value="all" ${historyMonth==='all'?'selected':''}>全部月份</option>
+                            ${monthOptions.map(m => `<option value="${m}" ${historyMonth===m?'selected':''}>${m}</option>`).join('')}
+                        </select>
+                        <select id="filterGrade">
+                            <option value="all" ${historyGrade==='all'?'selected':''}>全部职级</option>
+                            ${allGrades.map(g => `<option value="${g}" ${historyGrade===g?'selected':''}>${g}</option>`).join('')}
+                        </select>
+                        <button class="btn-primary btn-sm" id="applyHistoryFilter">应用筛选</button>
+                        <button class="btn-outline btn-sm" id="resetHistoryFilter">重置</button>
+                    </div>
+                </div>
+
+                <div class="export-buttons">
+                    <button onclick="exportApproved()"><i class="fas fa-download"></i> 导出已审核名单</button>
+                    <button onclick="exportProgress()"><i class="fas fa-download"></i> 导出报名进度</button>
+                    <button onclick="exportGrade()"><i class="fas fa-download"></i> 导出职级分布</button>
+                    <button onclick="exportCourse()"><i class="fas fa-download"></i> 导出课程分布</button>
+                    <button onclick="exportDept()"><i class="fas fa-download"></i> 导出部门报名人数</button>
+                    <button onclick="exportActual()"><i class="fas fa-download"></i> 导出实际参训名单</button>
+                </div>
+
+                <div style="margin-bottom: 30px;">
+                    <h2 style="margin-bottom: 20px; color: #b33a3a;"><i class="fas fa-clipboard-list"></i> 审核页面</h2>
+                    
+                    <div style="background: #fff5f5; border-radius: 24px; padding: 20px; margin-bottom: 30px; border: 1px solid #b33a3a;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                            <h3 style="color:#b33a3a;"><i class="fas fa-clock"></i> 待审核报名 (${pendingSubs.length})</h3>
+                            <div class="batch-actions">
+                                <button class="btn-outline btn" id="selectAllPending">全选</button>
+                                <button class="btn btn-primary" id="batchApprove">批量通过</button>
+                            </div>
+                        </div>
+                        <div class="editable-table-container" style="max-height: 400px; overflow: auto;">
+                            <table class="editable-table">
+                                <thead><tr><th>选择</th><th>工号</th><th>姓名</th><th>部门</th><th>课程</th><th>月份</th><th>模块</th><th>提交时间</th></tr></thead>
+                                <tbody>${pendingSubs.map(sub => `<tr data-id="${sub.id}"><td><input type="checkbox" class="pendingCheck" value="${sub.id}"></td><td>${sub.工号}</td><td>${sub.姓名}</td><td>${getDeptUntilSecondDash(sub.部门)}</td><td>${sub.课程}</td><td>${sub.月份}</td><td>${sub.模块}</td><td>${new Date(sub.提交时间).toLocaleString()}</td></tr>`).join('')}</tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div style="background: white; border-radius: 24px; padding: 20px; margin-bottom: 30px; border: 1px solid #b33a3a;">
+                        <h3 style="margin-bottom: 15px; color: #b33a3a;"><i class="fas fa-check-circle"></i> 已审核参训名单 (可编辑)</h3>
+                        
+                        <div class="dept-filter">
+                            <label><i class="fas fa-filter"></i> 筛选部门：</label>
+                            <select id="deptFilter" onchange="filterByDept(this.value)">
+                                <option value="all" ${selectedDept === 'all' ? 'selected' : ''}>全部部门</option>
+                                ${allDepts.map(dept => `<option value="${dept}" ${selectedDept === dept ? 'selected' : ''}>${dept}</option>`).join('')}
+                            </select>
+                        </div>
+                        
+                        ${buildEditableApprovedTable()}
+                    </div>
+
+                    <div style="background: white; border-radius: 24px; padding: 20px; border: 1px solid #b33a3a;">
+                        <h3 style="margin-bottom: 15px; color: #b33a3a;"><i class="fas fa-users"></i> 实际参训名单</h3>
+                        ${buildActualAttendanceTable()}
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 30px;">
+                    <h2 style="margin-bottom: 20px; color: #27ae60;"><i class="fas fa-chart-line"></i> 报名进度</h2>
+                    <div style="background: white; border-radius: 24px; padding: 20px; border: 1px solid #27ae60;">
+                        <h4 style="color:#27ae60;"><i class="fas fa-chart-simple"></i> 各部门报名进度</h4>
+                        <div class="progress-container">
+                            ${deptStats.map(d => `
+                                <div class="progress-item">
+                                    <div class="progress-header">
+                                        <span><strong>${d.dept}</strong></span>
+                                        <span>${d.count}人 (${d.percentage}%)</span>
+                                    </div>
+                                    <div class="progress-bar-bg">
+                                        <div class="progress-bar-fill" style="width: ${d.percentage}%;">${d.percentage > 10 ? d.percentage + '%' : ''}</div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid-2" style="margin-bottom: 30px;">
+                    <div class="chart-card" style="border-left: 4px solid #f39c12;">
+                        <h4 style="color:#f39c12;"><i class="fa-regular fa-chart-pie"></i> 课程分布及占比</h4>
+                        <canvas id="coursePieChart"></canvas>
+                        ${!hasCourseData ? '<div class="empty-warning">暂无课程数据</div>' : ''}
+                        <div style="margin-top: 15px; max-height: 150px; overflow-y: auto;">
+                            ${Object.entries(courseCount).map(([course, count]) => `
+                                <div style="display:flex; justify-content:space-between; padding: 3px 0; border-bottom: 1px dashed #f39c12; font-size:0.9rem;">
+                                    <span>${course}</span>
+                                    <span><strong>${count}</strong> 人 (${Math.round(count / totalPeople * 100)}%)</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="chart-card" style="border-left: 4px solid #9b59b6;">
+                        <h4 style="color:#9b59b6;"><i class="fa-regular fa-chart-bar"></i> 职级分布及占比</h4>
+                        <canvas id="gradeChart"></canvas>
+                        ${!hasGradeData ? '<div class="empty-warning">暂无职级数据</div>' : ''}
+                        <div style="margin-top: 15px; max-height: 150px; overflow-y: auto;">
+                            ${Object.entries(gradeCount).map(([grade, count]) => `
+                                <div style="display:flex; justify-content:space-between; padding: 3px 0; border-bottom: 1px dashed #9b59b6; font-size:0.9rem;">
+                                    <span><span class="position-badge">${grade}</span></span>
+                                    <span><strong>${count}</strong> 人 (${Math.round(count / totalPeople * 100)}%)</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 30px;">
+                    <h2 style="margin-bottom: 20px; color: #3498db;"><i class="fas fa-building"></i> 部门报名人数</h2>
+                    <div class="chart-card" style="border-left: 4px solid #3498db;">
+                        <h4 style="color:#3498db;"><i class="fa-regular fa-building"></i> 各部门参训人数 (全部)</h4>
+                        <canvas id="deptBarChart"></canvas>
+                        <div style="margin-top: 15px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 8px;">
+                            ${deptActualData.map(d => `<div style="background: #e6f3ff; border-radius: 20px; padding: 6px 12px; display: flex; justify-content: space-between; font-size:0.9rem; border:1px solid #3498db;"><span title="${d.dept}">${d.dept.length > 15 ? d.dept.substring(0,12)+'…' : d.dept}</span><span style="font-weight:600;">${d.count}人</span></div>`).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            contentDiv.innerHTML = html;
+
+            // 创建共享会话
+            document.getElementById('createShareBtn')?.addEventListener('click', function() {
+                const result = createShareSession();
+                showSuccessToast('共享会话创建成功');
+                renderAdmin();
+            });
+
+            // 复制分享链接
+            document.getElementById('copyShareLinkBtn')?.addEventListener('click', function() {
+                const link = `${window.location.href.split('?')[0]}?share=${shareId}`;
+                navigator.clipboard.writeText(link).then(() => {
+                    showSuccessToast('链接已复制到剪贴板');
+                });
+            });
+
+            // 刷新共享数据
+            document.getElementById('refreshShareBtn')?.addEventListener('click', function() {
+                if (shareId) {
+                    loadSharedData(shareId);
+                    showSuccessToast('数据已刷新');
+                }
+            });
+
+            // 绘制图表
+            setTimeout(() => {
+                const ctxPie = document.getElementById('coursePieChart')?.getContext('2d');
+                if (ctxPie && Object.keys(courseCount).length > 0) {
+                    new Chart(ctxPie, { 
+                        type: 'pie', 
+                        data: { 
+                            labels: Object.keys(courseCount), 
+                            datasets: [{ 
+                                data: Object.values(courseCount), 
+                                backgroundColor: ['#f39c12', '#f1c40f', '#e67e22', '#d35400', '#e67e22', '#f39c12', '#f1c40f'] 
+                            }] 
+                        }, 
+                        options: { 
+                            responsive: true, 
+                            maintainAspectRatio: false, 
+                            plugins: { 
+                                legend: { position: 'bottom' },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const label = context.label || '';
+                                            const value = context.raw || 0;
+                                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                            const percentage = Math.round((value / total) * 100);
+                                            return `${label}: ${value}人 (${percentage}%)`;
+                                        }
+                                    }
+                                }
+                            } 
+                        } 
+                    });
+                }
+
+                const ctxGrade = document.getElementById('gradeChart')?.getContext('2d');
+                if (ctxGrade && Object.keys(gradeCount).length > 0) {
+                    new Chart(ctxGrade, { 
+                        type: 'bar', 
+                        data: { 
+                            labels: Object.keys(gradeCount), 
+                            datasets: [{ 
+                                label: '人数', 
+                                data: Object.values(gradeCount), 
+                                backgroundColor: '#9b59b6', 
+                                borderRadius: 6 
+                            }] 
+                        }, 
+                        options: { 
+                            responsive: true, 
+                            maintainAspectRatio: false, 
+                            plugins: { 
+                                legend: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const value = context.raw || 0;
+                                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                            const percentage = Math.round((value / total) * 100);
+                                            return `${value}人 (${percentage}%)`;
+                                        }
+                                    }
+                                }
+                            }, 
+                            scales: { 
+                                y: { 
+                                    beginAtZero: true, 
+                                    grid: { color: '#f0f0f0' },
+                                    ticks: {
+                                        stepSize: 1,
+                                        callback: function(value) {
+                                            return Number.isInteger(value) ? value : null;
+                                        }
+                                    }
+                                } 
+                            } 
+                        } 
+                    });
+                }
+
+                const ctxDept = document.getElementById('deptBarChart')?.getContext('2d');
+                if (ctxDept && deptActualData.length > 0) {
+                    new Chart(ctxDept, { 
+                        type: 'bar', 
+                        data: { 
+                            labels: deptActualData.map(d => d.dept.length > 10 ? d.dept.substring(0,8) + '…' : d.dept), 
+                            datasets: [{ 
+                                label: '参训人数', 
+                                data: deptActualData.map(d => d.count), 
+                                backgroundColor: '#3498db', 
+                                borderRadius: 6 
+                            }] 
+                        }, 
+                        options: { 
+                            responsive: true, 
+                            maintainAspectRatio: false, 
+                            plugins: { 
+                                legend: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            return `${context.raw}人`;
+                                        }
+                                    }
+                                }
+                            }, 
+                            scales: { 
+                                y: { 
+                                    beginAtZero: true, 
+                                    grid: { color: '#f0f0f0' },
+                                    ticks: {
+                                        stepSize: 1,
+                                        callback: function(value) {
+                                            return Number.isInteger(value) ? value : null;
+                                        }
+                                    }
+                                } 
+                            } 
+                        } 
+                    });
+                }
+            }, 100);
+
+            // 事件绑定
+            document.getElementById('uploadUntrained')?.addEventListener('change', function(e) {
+                const file = e.target.files[0]; if(!file) return;
+                const reader = new FileReader();
+                reader.onload = (le) => {
+                    const data = new Uint8Array(le.target.result);
+                    const workbook = XLSX.read(data, {type:'array'});
+                    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                    
+                    untrainedEmployees = rows.map(r => {
+                        const empId = r.工号 || r['工号'] || r.员工编号 || r.employeeId || r.EmployeeID || r.empId || r.EmpID || '';
+                        const name = r.姓名 || r['姓名'] || r.name || r.Name || r.员工姓名 || '';
+                        
+                        let dept = '';
+                        const deptKeys = ['部门', '部门名称', 'department', 'Department', 'dept', 'Dept'];
+                        for (let key of deptKeys) { 
+                            if (r[key] && r[key] !== '') { 
+                                dept = r[key]; 
+                                break; 
+                            }
+                        }
+                        
+                        let pos = '';
+                        const posKeys = ['职务', '职位', '岗位', 'position', 'Position', 'job', 'Job', '职称'];
+                        for (let key of posKeys) { 
+                            if (r[key] && r[key] !== '') { 
+                                pos = r[key]; 
+                                break; 
+                            }
+                        }
+                        
+                        if (!pos) {
+                            const keys = Object.keys(r);
+                            for (let key of keys) {
+                                if (key.includes('职务') || key.includes('职位') || key.includes('岗位') || 
+                                    key.includes('position') || key.includes('Position') || key.includes('job')) {
+                                    pos = r[key];
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        return { 
+                            工号: String(empId || '').trim(), 
+                            姓名: String(name || '').trim(), 
+                            部门: String(dept || '').trim(), 
+                            职务: String(pos || '').trim() 
+                        };
+                    }).filter(e => e.工号 && e.工号 !== '' && e.姓名 && e.姓名 !== '');
+                    
+                    saveToStorage();
+                    
+                    const uploadMsg = document.getElementById('uploadSuccessMsg');
+                    uploadMsg.style.display = 'inline-flex';
+                    showSuccessToast(`文件上传成功，共 ${untrainedEmployees.length} 人`);
+                    setTimeout(() => uploadMsg.style.display = 'none', 3000);
+                    
+                    renderAdmin();
+                };
+                reader.readAsArrayBuffer(file);
+            });
+
+            document.getElementById('setDeadlineBtn')?.addEventListener('click', function() {
+                const picker = document.getElementById('deadlinePicker').value;
+                if(picker) { deadline = picker; saveToStorage(); updateDeadlineDisplay(); renderAdmin(); }
+            });
+
+            document.getElementById('applyHistoryFilter')?.addEventListener('click', function() {
+                historyYear = document.getElementById('filterYear').value;
+                historyQuarter = document.getElementById('filterQuarter').value;
+                historyMonth = document.getElementById('filterMonth').value;
+                historyGrade = document.getElementById('filterGrade').value;
+                renderAdmin();
+            });
+
+            document.getElementById('resetHistoryFilter')?.addEventListener('click', function() {
+                historyYear = 'all'; historyQuarter = 'all'; historyMonth = 'all'; historyGrade = 'all';
+                renderAdmin();
+            });
+
+            document.getElementById('selectAllPending')?.addEventListener('click', ()=>{
+                document.querySelectorAll('.pendingCheck').forEach(cb => cb.checked = true);
+            });
+            
+            document.getElementById('batchApprove')?.addEventListener('click', ()=>{
+                const selected = Array.from(document.querySelectorAll('.pendingCheck:checked')).map(cb => cb.value);
+                if(selected.length===0) return alert('请选择记录');
+                submissions.forEach(s => { if(selected.includes(s.id)) s.审核状态 = '已审核'; });
+                
+                // 保存到共享存储
+                if (shareId) {
+                    saveSharedData(shareId);
+                } else {
+                    saveToStorage();
+                }
+                
+                renderAdmin();
+                showSuccessToast('批量审核通过');
+            });
+            
+            document.getElementById('clearStorageBtn')?.addEventListener('click', ()=>{
+                if(confirm('重置所有数据？')) { 
+                    localStorage.clear(); 
+                    untrainedEmployees=[]; 
+                    submissions=[]; 
+                    deadline=null; 
+                    shareId = null;
+                    initPositionGradeMap();
+                    saveToStorage(); 
+                    loadFromStorage(); 
+                    renderAdmin(); 
+                }
+            });
+        }
+
+        // 导出功能
+        window.exportApproved = function() {
+            const approved = submissions.filter(s => s.审核状态 === '已审核');
+            const exportData = approved.map(s => ({
+                工号: s.工号,
+                姓名: s.姓名,
+                部门: getDeptUntilSecondDash(s.部门),
+                职务: s.职务,
+                职级: getGradeByPosition(s.职务),
+                课程: s.课程,
+                月份: s.月份,
+                模块: s.模块,
+                状态: s.请假状态 || '正常'
+            }));
+            exportToExcel(exportData, '已审核名单', '已审核名单.xlsx');
+        };
+
+        window.exportProgress = function() {
+            const deptStatsMap = new Map();
+            submissions.filter(s => s.审核状态 === '已审核').forEach(sub => {
+                if (!sub.部门) return;
+                const shortDept = getDeptUntilSecondDash(sub.部门);
+                if (!deptStatsMap.has(shortDept)) {
+                    deptStatsMap.set(shortDept, new Set());
+                }
+                deptStatsMap.get(shortDept).add(sub.工号);
+            });
+
+            const exportData = [];
+            for (let [dept, peopleSet] of deptStatsMap.entries()) {
+                exportData.push({
+                    部门: dept,
+                    报名人数: peopleSet.size
+                });
+            }
+            exportData.sort((a, b) => b.报名人数 - a.报名人数);
+            exportToExcel(exportData, '报名进度', '报名进度.xlsx');
+        };
+
+        window.exportGrade = function() {
+            const gradeCount = {};
+            const gradePeopleSet = new Set();
+            submissions.filter(s => s.审核状态 === '已审核').forEach(sub => {
+                if (sub.职务 && sub.职务 !== '未填写' && sub.职务 !== '') {
+                    const grade = getGradeByPosition(sub.职务);
+                    if (!gradePeopleSet.has(sub.工号)) {
+                        gradeCount[grade] = (gradeCount[grade] || 0) + 1;
+                        gradePeopleSet.add(sub.工号);
+                    }
+                }
+            });
+            const exportData = Object.entries(gradeCount).map(([grade, count]) => ({
+                职级: grade,
+                人数: count
+            }));
+            exportToExcel(exportData, '职级分布', '职级分布.xlsx');
+        };
+
+        window.exportCourse = function() {
+            const courseCount = {};
+            const coursePeopleSet = new Set();
+            submissions.filter(s => s.审核状态 === '已审核').forEach(sub => {
+                if (sub.课程) {
+                    const key = sub.工号 + '_' + sub.课程;
+                    if (!coursePeopleSet.has(key)) {
+                        courseCount[sub.课程] = (courseCount[sub.课程] || 0) + 1;
+                        coursePeopleSet.add(key);
+                    }
+                }
+            });
+            const exportData = Object.entries(courseCount).map(([course, count]) => ({
+                课程: course,
+                报名人数: count
+            }));
+            exportToExcel(exportData, '课程分布', '课程分布.xlsx');
+        };
+
+        window.exportDept = function() {
+            const deptActualMap = new Map();
+            submissions.filter(s => s.审核状态 === '已审核' && !s.请假状态).forEach(sub => {
+                if (sub.部门) {
+                    const shortDept = getDeptUntilSecondDash(sub.部门);
+                    if (!deptActualMap.has(shortDept)) {
+                        deptActualMap.set(shortDept, new Set());
+                    }
+                    deptActualMap.get(shortDept).add(sub.工号);
+                }
+            });
+            const exportData = [];
+            for (let [dept, peopleSet] of deptActualMap.entries()) {
+                exportData.push({
+                    部门: dept,
+                    报名人数: peopleSet.size
+                });
+            }
+            exportData.sort((a, b) => b.报名人数 - a.报名人数);
+            exportToExcel(exportData, '部门报名人数', '部门报名人数.xlsx');
+        };
+
+        window.exportActual = function() {
+            const actual = submissions.filter(s => s.审核状态 === '已审核' && !s.请假状态);
+            const exportData = actual.map(s => ({
+                工号: s.工号,
+                姓名: s.姓名,
+                部门: getDeptUntilSecondDash(s.部门),
+                职务: s.职务,
+                职级: getGradeByPosition(s.职务),
+                课程: s.课程,
+                月份: s.月份,
+                模块: s.模块,
+                状态: '正常'
+            }));
+            exportToExcel(exportData, '实际参训名单', '实际参训名单.xlsx');
+        };
+
+        window.filterByDept = function(dept) {
+            selectedDept = dept;
+            renderAdmin();
+        };
+
+        window.toggleLeave = function(id) {
+            const sub = submissions.find(s => s.id === id);
+            if (sub) {
+                sub.请假状态 = sub.请假状态 ? '' : '请假';
+                
+                if (shareId) {
+                    saveSharedData(shareId);
+                } else {
+                    saveToStorage();
+                }
+                
+                showSuccessToast(sub.请假状态 ? '已标记为请假' : '已取消请假');
+                renderAdmin();
+            }
+        };
+
+        window.startEdit = function(id) {
+            editingSubmissionId = id;
+            renderAdmin();
+        };
+
+        window.cancelEdit = function() {
+            editingSubmissionId = null;
+            renderAdmin();
+        };
+
+        window.saveEdit = function(id) {
+            const sub = submissions.find(s => s.id === id);
+            if (!sub) return;
+
+            sub.工号 = document.getElementById('edit_工号')?.value.trim() || sub.工号;
+            sub.姓名 = document.getElementById('edit_姓名')?.value.trim() || sub.姓名;
+            sub.部门 = document.getElementById('edit_部门')?.value.trim() || sub.部门;
+            sub.职务 = document.getElementById('edit_职务')?.value.trim() || '';
+            sub.课程 = document.getElementById('edit_课程')?.value || sub.课程;
+            sub.月份 = document.getElementById('edit_月份')?.value || sub.月份;
+            sub.模块 = document.getElementById('edit_模块')?.value || sub.模块;
+            sub.请假状态 = document.getElementById('edit_请假状态')?.value || '';
+
+            if (shareId) {
+                saveSharedData(shareId);
+            } else {
+                saveToStorage();
+            }
+            
+            editingSubmissionId = null;
+            showSuccessToast('报名信息已更新');
+            renderAdmin();
+        };
+
+        window.deleteSubmission = function(id) {
+            if (confirm('确定要删除这条报名记录吗？')) {
+                submissions = submissions.filter(s => s.id !== id);
+                
+                if (shareId) {
+                    saveSharedData(shareId);
+                } else {
+                    saveToStorage();
+                }
+                
+                showSuccessToast('报名记录已删除');
+                renderAdmin();
+            }
+        };
+
+        // 角色切换
+        async function switchRole(role) {
+            currentRole = role;
+            btnTrainee.classList.toggle('active', role==='trainee');
+            btnAdmin.classList.toggle('active', role==='admin');
+            
+            if (role === 'trainee') {
+                renderTrainee();
+            } else {
+                try {
+                    if (!adminAuthenticated) {
+                        await showPasswordModal();
+                    }
+                    renderAdmin();
+                } catch (e) {}
+            }
+        }
+
+        function showPasswordModal() {
+            return new Promise((resolve, reject) => {
+                if (adminAuthenticated) { resolve(true); return; }
+                modal.style.display = 'flex';
+                userInput.value = ''; passwordInput.value = ''; userInput.focus();
+                const onCancel = () => { cleanup(); reject('cancelled'); };
+                const onSubmit = () => {
+                    if (userInput.value.trim() === ADMIN_USER && passwordInput.value.trim() === ADMIN_PASSWORD) {
+                        adminAuthenticated = true; cleanup(); resolve(true);
+                    } else { alert('账号或密码错误'); passwordInput.value = ''; userInput.focus(); }
+                };
+                const onKeyDown = (e) => { if(e.key==='Enter') { e.preventDefault(); onSubmit(); } else if(e.key==='Escape') onCancel(); };
+                const cleanup = () => {
+                    modal.style.display = 'none';
+                    cancelBtn.removeEventListener('click', onCancel);
+                    submitBtn.removeEventListener('click', onSubmit);
+                    userInput.removeEventListener('keydown', onKeyDown);
+                    passwordInput.removeEventListener('keydown', onKeyDown);
+                };
+                cancelBtn.addEventListener('click', onCancel);
+                submitBtn.addEventListener('click', onSubmit);
+                userInput.addEventListener('keydown', onKeyDown);
+                passwordInput.addEventListener('keydown', onKeyDown);
+            });
+        }
+
+        btnTrainee.addEventListener('click', () => switchRole('trainee'));
+        btnAdmin.addEventListener('click', () => switchRole('admin'));
+
+        // 启动
+        switchRole('admin');
+    })();
+</script>
+</body>
+</html>
